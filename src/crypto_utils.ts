@@ -16,10 +16,9 @@ import * as base64 from "base64-js";
 
 import { AppAuthError } from "./errors";
 
-const HAS_CRYPTO =
-  (typeof window !== "undefined" && !!(window.crypto as any)) || !!crypto;
-const HAS_SUBTLE_CRYPTO =
-  (HAS_CRYPTO && !!(window.crypto.subtle as any)) || !!crypto.subtle;
+const Crypto = (typeof window !== "undefined" && window.crypto) || crypto;
+const HAS_CRYPTO = !!(Crypto as any);
+const HAS_SUBTLE_CRYPTO = HAS_CRYPTO && !!(Crypto.subtle as any);
 const CHARSET =
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
@@ -70,7 +69,6 @@ export class DefaultCrypto implements Crypto {
   generateRandom(size: number) {
     const buffer = new Uint8Array(size);
     if (HAS_CRYPTO) {
-      const Crypto = window?.crypto || crypto;
       Crypto.getRandomValues(buffer);
     } else {
       // fall back to Math.random() if nothing else is available
@@ -92,7 +90,7 @@ export class DefaultCrypto implements Crypto {
     }
 
     return new Promise((resolve, reject) => {
-      crypto.subtle.digest("SHA-256", textEncodeLite(code)).then(
+      Crypto.subtle.digest("SHA-256", textEncodeLite(code)).then(
         (buffer) => {
           return resolve(urlSafe(new Uint8Array(buffer)));
         },
