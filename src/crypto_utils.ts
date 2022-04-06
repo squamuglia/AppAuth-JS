@@ -12,13 +12,16 @@
  * limitations under the License.
  */
 
-import * as base64 from 'base64-js';
+import * as base64 from "base64-js";
 
-import {AppAuthError} from './errors';
+import { AppAuthError } from "./errors";
 
-const HAS_CRYPTO = typeof window !== 'undefined' && !!(window.crypto as any);
-const HAS_SUBTLE_CRYPTO = HAS_CRYPTO && !!(window.crypto.subtle as any);
-const CHARSET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+const HAS_CRYPTO =
+  (typeof window !== "undefined" && !!(window.crypto as any)) || !!crypto;
+const HAS_SUBTLE_CRYPTO =
+  (HAS_CRYPTO && !!(window.crypto.subtle as any)) || !!crypto.subtle;
+const CHARSET =
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
 export function bufferToString(buffer: Uint8Array) {
   let state = [];
@@ -26,12 +29,12 @@ export function bufferToString(buffer: Uint8Array) {
     let index = buffer[i] % CHARSET.length;
     state.push(CHARSET[index]);
   }
-  return state.join('');
+  return state.join("");
 }
 
 export function urlSafe(buffer: Uint8Array): string {
   const encoded = base64.fromByteArray(new Uint8Array(buffer));
-  return encoded.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  return encoded.replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
 }
 
 // adapted from source: http://stackoverflow.com/a/11058858
@@ -67,7 +70,8 @@ export class DefaultCrypto implements Crypto {
   generateRandom(size: number) {
     const buffer = new Uint8Array(size);
     if (HAS_CRYPTO) {
-      window.crypto.getRandomValues(buffer);
+      const Crypto = window?.crypto || crypto;
+      Crypto.getRandomValues(buffer);
     } else {
       // fall back to Math.random() if nothing else is available
       for (let i = 0; i < size; i += 1) {
@@ -79,16 +83,21 @@ export class DefaultCrypto implements Crypto {
 
   deriveChallenge(code: string): Promise<string> {
     if (code.length < 43 || code.length > 128) {
-      return Promise.reject(new AppAuthError('Invalid code length.'));
+      return Promise.reject(new AppAuthError("Invalid code length."));
     }
     if (!HAS_SUBTLE_CRYPTO) {
-      return Promise.reject(new AppAuthError('window.crypto.subtle is unavailable.'));
+      return Promise.reject(
+        new AppAuthError("window.crypto.subtle is unavailable.")
+      );
     }
 
     return new Promise((resolve, reject) => {
-      crypto.subtle.digest('SHA-256', textEncodeLite(code)).then(buffer => {
-        return resolve(urlSafe(new Uint8Array(buffer)));
-      }, error => reject(error));
+      crypto.subtle.digest("SHA-256", textEncodeLite(code)).then(
+        (buffer) => {
+          return resolve(urlSafe(new Uint8Array(buffer)));
+        },
+        (error) => reject(error)
+      );
     });
   }
 }
